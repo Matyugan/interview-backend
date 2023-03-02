@@ -1,22 +1,20 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEmail, IsNotEmpty } from 'class-validator';
 
-export class CreateUserDto {
+export class UpdateUserDto {
   @ApiProperty({
     description: 'Имя',
     example: 'Иван',
-    required: true,
   })
   @IsNotEmpty()
-  readonly firstName: string;
+  readonly firstName?: string;
 
   @ApiProperty({
     description: 'Фамилия',
     example: 'Пронин',
-    required: true,
   })
   @IsNotEmpty()
-  readonly lastName: string;
+  readonly lastName?: string;
 
   @ApiProperty({
     description: 'Отчество',
@@ -39,19 +37,17 @@ export class CreateUserDto {
   @ApiProperty({
     description: 'Пароль',
     example: 'qwerty',
-    required: true,
   })
   @IsNotEmpty()
-  readonly password: string;
+  readonly password?: string;
 
   @ApiProperty({
     description: 'e-mail',
     example: 'pronin@mail.ru',
-    required: true,
   })
   @IsEmail()
   @IsNotEmpty()
-  readonly email: string;
+  readonly email?: string;
 
   @ApiProperty({
     description: 'Номер телефона',
@@ -65,7 +61,7 @@ export class CreateUserDto {
     required: true,
   })
   @IsNotEmpty()
-  readonly photo: string;
+  readonly photo?: string;
 
   @ApiProperty({
     description: 'Описание',
