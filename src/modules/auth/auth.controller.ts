@@ -4,6 +4,7 @@ import { ApiTags } from '@nestjs/swagger';
 import { AuthService } from '@/modules/auth/auth.service';
 import { User } from '@/modules/user/entities/user.entity';
 import { AuthDto } from '@/modules/auth/dto/auth.dto';
+import { Tokens } from '@/modules/auth/types';
 @ApiTags('auth')
 @Controller('api/v1/auth')
 export class AuthController {
@@ -16,7 +17,7 @@ export class AuthController {
   }
 
   @Post('signin')
-  async signIn(@Body() authDto: AuthDto) {
+  async signIn(@Body() authDto: AuthDto): Promise<Tokens> {
     const tokens = await this.authService.signIn(authDto);
     return tokens;
   }
