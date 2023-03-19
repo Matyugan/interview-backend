@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { CreateUserDto } from '@/modules/user/dto/createUser.dto';
 import { UserService } from '@/modules/user/user.service';
 import * as argon2 from 'argon2';
@@ -53,7 +53,7 @@ export class AuthService {
     );
 
     if (!passwordMatches) {
-      throw new BadRequestException('Некорректный пароль');
+      throw new UnauthorizedException('Некорректный пароль');
     }
 
     const tokens = await this.tokenService.getTokens(user.id, user.firstName);
