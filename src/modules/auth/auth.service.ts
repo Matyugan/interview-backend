@@ -21,7 +21,21 @@ export class AuthService {
    */
   async signUp(createUserDto: CreateUserDto): Promise<User> {
     const createdUser = await this.userService.createUser(createUserDto);
-    return createdUser;
+
+    const tokens = await this.tokenService.getTokens(
+      createdUser.id,
+      createdUser.firstName,
+    );
+
+    await this.tokenService.updateRefreshToken(
+      createdUser.id,
+      tokens.refreshToken,
+    );
+
+    return {
+      ...createdUser,
+      ...tokens,
+    };
   }
 
   /**
@@ -43,7 +57,9 @@ export class AuthService {
     }
 
     const tokens = await this.tokenService.getTokens(user.id, user.firstName);
+
     await this.tokenService.updateRefreshToken(user.id, tokens.refreshToken);
+
     return tokens;
   }
 
