@@ -1,60 +1,61 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import * as argon2 from 'argon2';
-
-import { CreateUserDto } from '@/modules/user/dto/createUser.dto';
 import { UpdateUserDto } from '@/modules/user/dto/updateUser.dto';
 import { User } from '@/modules/user/entities/user.entity';
 
+interface IUserService {
+  updateUser(id: string, userData: UpdateUserDto): void;
+  findByEmail(email: string): Promise<User>;
+  findById(id: string): Promise<User>;
+  validateUserByEmail(email: string): Promise<boolean>;
+}
+
 @Injectable()
-export class UserService {
+export class UserService implements IUserService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
   ) {}
 
   /**
-   * Создает нового пользоваля
+   * Обновляет данные пользователя
    *
-   * @param createUserDto - поля из тела запроса
-   * @returns - возвращает нового пользователя
+   * @param userData - поля из тела запроса
+   * @returns возвращает обновленного пользователя
+   * @throws выбрасывает исключение если произошла внутренняя ошибка
    */
-  async createUser(createUserDto: CreateUserDto): Promise<User> {
-    const isUser = await this.validateUserByEmail(createUserDto.email);
-
-    if (isUser) {
-      throw new BadRequestException(
-        'Пользователь с таким email уже существует',
-      );
+  async updateUser(id: string, userData: UpdateUserDto) {
+    try {
+      await this.userRepository.update(id, userData);
+    } catch (error) {
+      throw new InternalServerErrorException(error);
     }
-
-    const password = await argon2.hash(createUserDto.password);
-    return this.userRepository.save({ ...createUserDto, password });
-  }
-
-  /**
-   * Обновляет данные пользоваля
-   *
-   * @param updateUserDto - поля из тела запроса
-   * @returns - возвращает нового пользователя
-   */
-  async updateUser(id: string, updateUserDto: UpdateUserDto) {
-    await this.userRepository.update(id, updateUserDto);
   }
 
   /**
    * Ищет и возвращает пользователя по e-mail
    *
    * @param email - e-mail
-   * @returns - возвращает найденного пользователя
+   * @returns возвращает найденного пользователя
+   * @throws выбрасывает исключение если произошла внутренняя ошибка или пользователя с указанным email не существует
    */
   async findByEmail(email: string): Promise<User> {
-    const user = await this.userRepository.findOne({
-      where: {
-        email,
-      },
-    });
+    let user: User | null = null;
+
+    try {
+      user = await this.userRepository.findOne({
+        where: {
+          email,
+        },
+      });
+    } catch (error) {
+      throw new InternalServerErrorException(error);
+    }
 
     if (!user) {
       throw new BadRequestException(
@@ -66,12 +67,51 @@ export class UserService {
   }
 
   /**
+   * Ищет и возвращает пользователя по id
+   *
+   * @param id - идентификатор пользователя
+   * @returns возвращает найденного пользователя
+   * @throws выбрасывает исключение если произошла внутренняя ошибка или пользователя с указанным id не существует
+   */
+  async findById(id: string): Promise<User> {
+    let user: User | null = null;
+
+    try {
+      user = await this.userRepository.findOne({
+        where: {
+          id,
+        },
+        relations: {
+          refreshToken: true,
+        },
+      });
+    } catch (error) {
+      throw new InternalServerErrorException(error);
+    }
+
+    if (!user) {
+      throw new BadRequestException('Пользователя с заданным id не существует');
+    }
+
+    return user;
+  }
+
+  /**
    * Проверяет наличие пользователя по электронной почте
    *
    * @param email - почта пользователя
+   * @returns возвращает булевое значение в зависимости от наличия пользователя в бд
+   * @throws выбрасывает исключение если произошла внутренняя ошибка
    */
   async validateUserByEmail(email: string): Promise<boolean> {
-    const user = await this.userRepository.find({ where: { email } });
+    let user: User[] | null = null;
+
+    try {
+      user = await this.userRepository.find({ where: { email } });
+    } catch (error) {
+      throw new InternalServerErrorException(error);
+    }
+
     return user.length ? true : false;
   }
 }

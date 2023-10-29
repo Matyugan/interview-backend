@@ -1,7 +1,16 @@
-import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
+import { RefreshToken } from '@/modules/token/entities/refreshToken.entity';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  Index,
+  OneToMany,
+} from 'typeorm';
+import { IUser } from '@/modules/user/types/user.interface';
+import { Exclude } from 'class-transformer';
 
-@Entity('user')
-export class User {
+@Entity('users')
+export class User implements IUser {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -20,11 +29,13 @@ export class User {
   })
   lastName: string;
 
+  @Index({ unique: true })
   @Column({
     type: String,
   })
   email: string;
 
+  @Exclude({ toPlainOnly: true })
   @Column({
     type: String,
   })
@@ -60,9 +71,6 @@ export class User {
   })
   photo: string;
 
-  @Column({
-    type: String,
-    nullable: true,
-  })
-  refreshToken: string;
+  @OneToMany(() => RefreshToken, (token) => token.userId, { nullable: false })
+  refreshToken: RefreshToken;
 }

@@ -1,48 +1,96 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  InternalServerErrorException,
+  ConflictException,
+} from '@nestjs/common';
 import { CreateUserDto } from '@/modules/user/dto/createUser.dto';
 import { UserService } from '@/modules/user/user.service';
 import * as argon2 from 'argon2';
-import { User } from '@/modules/user/entities/user.entity';
 import { AuthDto } from '@/modules/auth/dto/auth.dto';
 import { TokenService } from '@/modules/token/token.service';
+import { ICreatedUser } from '@/modules/user/types/createdUser.interface';
+import { ConfigService } from '@nestjs/config';
+import { DataSource } from 'typeorm';
+import { RefreshToken } from '@/modules/token/entities/refreshToken.entity';
+import { User } from '@/modules/user/entities/user.entity';
+
+interface IAuthService {
+  signUp(createUserDto: CreateUserDto): Promise<ICreatedUser>;
+  signIn(userData: AuthDto): any;
+}
 
 @Injectable()
-export class AuthService {
+export class AuthService implements IAuthService {
   constructor(
     private userService: UserService,
     private tokenService: TokenService,
+    private configService: ConfigService,
+    private dataSource: DataSource,
   ) {}
 
   /**
    * Создает новоего пользователя в системе
    *
    * @param createUserDto - данные пользователя
-   * @returns - данные созданного пользователя
+   * @returns данные созданного пользователя
    */
-  async signUp(createUserDto: CreateUserDto): Promise<User> {
-    const createdUser = await this.userService.createUser(createUserDto);
+  async signUp(createUserDto: CreateUserDto): Promise<ICreatedUser> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    const tokens = await this.tokenService.getTokens(
-      createdUser.id,
-      createdUser.firstName,
+    const isUser = await this.userService.validateUserByEmail(
+      createUserDto.email,
     );
 
-    await this.tokenService.updateRefreshToken(
-      createdUser.id,
-      tokens.refreshToken,
-    );
+    if (isUser) {
+      throw new ConflictException('Пользователь с таким email уже существует');
+    }
 
-    return {
-      ...createdUser,
-      ...tokens,
-    };
+    const password = await argon2.hash(createUserDto.password);
+
+    try {
+      const user = await queryRunner.manager.getRepository(User).save({
+        ...createUserDto,
+        password,
+      });
+
+      const tokensPair = await this.tokenService.generateTokensPaire(
+        user.id,
+        user.firstName,
+      );
+
+      const savedRefreshToken = await queryRunner.manager
+        .getRepository(RefreshToken)
+        .save({
+          refreshToken: tokensPair.refreshToken,
+          userId: user.id,
+          expireTime: this.configService.get<string>('EXPIRE_TIME_REFRESH'),
+        });
+
+      await queryRunner.commitTransaction();
+
+      delete user.password;
+
+      return {
+        ...user,
+        refreshTokenId: savedRefreshToken.id,
+        accessToken: tokensPair.accessToken,
+      };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw new InternalServerErrorException(error);
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   /**
    * Аутентифицирует пользователя в системе
    *
    * @param userData - данные пользователя
-   * @returns - токены
+   * @returns токены
    */
   async signIn(userData: AuthDto) {
     const user = await this.userService.findByEmail(userData.email);
@@ -56,11 +104,21 @@ export class AuthService {
       throw new UnauthorizedException('Некорректный пароль');
     }
 
-    const tokens = await this.tokenService.getTokens(user.id, user.firstName);
+    const tokensPair = await this.tokenService.generateTokensPaire(
+      user.id,
+      user.firstName,
+    );
 
-    await this.tokenService.updateRefreshToken(user.id, tokens.refreshToken);
+    const savedRefreshToken = await this.tokenService.saveRefreshToken({
+      refreshToken: tokensPair.refreshToken,
+      userId: user.id,
+      expireTime: this.configService.get<string>('EXPIRE_TIME_REFRESH'),
+    });
 
-    return tokens;
+    return {
+      accessToken: tokensPair.accessToken,
+      refreshTokenId: savedRefreshToken.id,
+    };
   }
 
   /**
@@ -69,7 +127,7 @@ export class AuthService {
    * @param userId - идентификатор пользователя
    * @returns - токены
    */
-  async logout(userId: string) {
-    return this.userService.updateUser(userId, { refreshToken: null });
+  async logout(refreshTokenId: string) {
+    return this.tokenService.deleteRefreshToken(refreshTokenId);
   }
 }

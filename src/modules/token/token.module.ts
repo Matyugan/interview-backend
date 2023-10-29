@@ -1,10 +1,12 @@
 import { Module } from '@nestjs/common';
-import { UserModule } from '@/modules/user/user.module';
 import { TokenService } from '@/modules/token/token.service';
-import { JwtService } from '@nestjs/jwt';
+import { JwtModule } from '@nestjs/jwt';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { RefreshToken } from '@/modules/token/entities/refreshToken.entity';
+
 @Module({
-  imports: [UserModule],
-  providers: [TokenService, JwtService],
+  imports: [JwtModule, TypeOrmModule.forFeature([RefreshToken])],
+  providers: [TokenService],
   exports: [TokenService],
 })
 export class TokenModule {}

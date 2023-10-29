@@ -1,24 +1,95 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { TokenService } from '@/modules/token/token.service';
+import {
+  Body,
+  ConflictException,
+  Controller,
+  HttpCode,
+  Post,
+  Req,
+  Res,
+  HttpStatus,
+  Get,
+  UseGuards,
+} from '@nestjs/common';
 import { CreateUserDto } from '@/modules/user/dto/createUser.dto';
 import { ApiTags } from '@nestjs/swagger';
 import { AuthService } from '@/modules/auth/auth.service';
-import { User } from '@/modules/user/entities/user.entity';
 import { AuthDto } from '@/modules/auth/dto/auth.dto';
-import { Tokens } from '@/modules/auth/types';
+import { Response as IResponse, Request as IRequest } from 'express';
+import { ICreatedUser } from '@/modules/user/types/createdUser.interface';
+import { ConfigService } from '@nestjs/config';
+// import { AccessTokenGuard } from '@/common/guards/accessToken.guard';
+import { RefreshTokenGuard } from '@/common/guards/refreshToken.guard';
+
 @ApiTags('auth')
 @Controller('api/v1/auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private configService: ConfigService,
+    private tokenService: TokenService,
+  ) {}
 
   @Post('signup')
-  async signUp(@Body() createUserDto: CreateUserDto): Promise<User> {
+  async signUp(
+    @Body() createUserDto: CreateUserDto,
+    @Res({ passthrough: true }) response: IResponse,
+  ): Promise<ICreatedUser> {
     const userData = await this.authService.signUp(createUserDto);
+
+    response.cookie('refreshTokenId', userData.refreshTokenId, {
+      httpOnly: true,
+      // Время жизни эквивалентно времени жизни refresh токена
+      maxAge: Number(
+        this.configService.get<string>('EXPIRE_TIME_SECONDS_4_REFRESH_TOKEN'),
+      ),
+    });
+
+    delete userData.refreshTokenId;
     return userData;
   }
 
   @Post('signin')
-  async signIn(@Body() authDto: AuthDto): Promise<Tokens> {
-    const tokens = await this.authService.signIn(authDto);
-    return tokens;
+  async signIn(
+    @Body() authDto: AuthDto,
+    @Res({ passthrough: true }) response: IResponse,
+  ) {
+    const result = await this.authService.signIn(authDto);
+
+    response.cookie('refreshTokenId', result.refreshTokenId, {
+      httpOnly: true,
+      // Время жизни эквивалентно времени жизни refresh токена
+      maxAge: Number(
+        this.configService.get<string>('EXPIRE_TIME_SECONDS_4_REFRESH_TOKEN'),
+      ),
+    });
+
+    return { accessToken: result.accessToken };
+  }
+
+  @Get('logout')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async logout(
+    @Req() request: IRequest,
+    @Res({ passthrough: true }) response: IResponse,
+  ) {
+    const result = await this.authService.logout(
+      request.cookies['refreshTokenId'],
+    );
+
+    if (!result.affected) {
+      throw new ConflictException(
+        'Refresh token не был удалён, по причине отсутствия в базе',
+      );
+    }
+
+    response.clearCookie('refreshTokenId');
+    return;
+  }
+
+  @UseGuards(RefreshTokenGuard)
+  @Get('refreshing-tokens')
+  profile(@Req() request: IRequest) {
+    this.tokenService.updateTokens(request.cookies.refreshTokenId);
   }
 }

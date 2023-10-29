@@ -74,6 +74,4 @@ export class UpdateUserDto {
     example: 'Документы подтверждающие навыки специалиста',
   })
   readonly documents?: string;
-
-  readonly refreshToken?: string;
 }
