@@ -11,13 +11,17 @@ import { AuthDto } from '@/modules/auth/dto/auth.dto';
 import { TokenService } from '@/modules/token/token.service';
 import { ICreatedUser } from '@/modules/user/types/createdUser.interface';
 import { ConfigService } from '@nestjs/config';
-import { DataSource } from 'typeorm';
+import { DataSource, DeleteResult } from 'typeorm';
 import { RefreshToken } from '@/modules/token/entities/refreshToken.entity';
 import { User } from '@/modules/user/entities/user.entity';
 
 interface IAuthService {
   signUp(createUserDto: CreateUserDto): Promise<ICreatedUser>;
-  signIn(userData: AuthDto): any;
+  signIn(userData: AuthDto): Promise<{
+    accessToken: string;
+    refreshTokenId: string;
+  }>;
+  logout(refreshTokenId: string): Promise<DeleteResult>;
 }
 
 @Injectable()
@@ -33,7 +37,8 @@ export class AuthService implements IAuthService {
    * Создает новоего пользователя в системе
    *
    * @param createUserDto - данные пользователя
-   * @returns данные созданного пользователя
+   * @returns - данные созданного пользователя
+   * @throws - выбрасывает исключение, если пользователь уже существует или произошла внутренняя ошибка
    */
   async signUp(createUserDto: CreateUserDto): Promise<ICreatedUser> {
     const queryRunner = this.dataSource.createQueryRunner();
@@ -65,7 +70,7 @@ export class AuthService implements IAuthService {
         .getRepository(RefreshToken)
         .save({
           refreshToken: tokensPair.refreshToken,
-          userId: user.id,
+          user,
           expireTime: this.configService.get<string>('EXPIRE_TIME_REFRESH'),
         });
 
@@ -90,11 +95,15 @@ export class AuthService implements IAuthService {
    * Аутентифицирует пользователя в системе
    *
    * @param userData - данные пользователя
-   * @returns токены
+   * @returns - токены
+   * @throws - выбрасывает исключание, если пароли не совпадают
    */
-  async signIn(userData: AuthDto) {
+  async signIn(userData: AuthDto): Promise<{
+    accessToken: string;
+    refreshTokenId: string;
+  }> {
     const user = await this.userService.findByEmail(userData.email);
-
+    console.log(user);
     const passwordMatches = await argon2.verify(
       user.password,
       userData.password,
@@ -111,7 +120,7 @@ export class AuthService implements IAuthService {
 
     const savedRefreshToken = await this.tokenService.saveRefreshToken({
       refreshToken: tokensPair.refreshToken,
-      userId: user.id,
+      user,
       expireTime: this.configService.get<string>('EXPIRE_TIME_REFRESH'),
     });
 

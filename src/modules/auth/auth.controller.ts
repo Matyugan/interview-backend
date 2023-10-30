@@ -18,7 +18,7 @@ import { AuthDto } from '@/modules/auth/dto/auth.dto';
 import { Response as IResponse, Request as IRequest } from 'express';
 import { ICreatedUser } from '@/modules/user/types/createdUser.interface';
 import { ConfigService } from '@nestjs/config';
-// import { AccessTokenGuard } from '@/common/guards/accessToken.guard';
+import { AccessTokenGuard } from '@/common/guards/accessToken.guard';
 import { RefreshTokenGuard } from '@/common/guards/refreshToken.guard';
 
 @ApiTags('auth')
@@ -67,6 +67,7 @@ export class AuthController {
     return { accessToken: result.accessToken };
   }
 
+  @UseGuards(AccessTokenGuard, RefreshTokenGuard)
   @Get('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
   async logout(
@@ -89,7 +90,24 @@ export class AuthController {
 
   @UseGuards(RefreshTokenGuard)
   @Get('refreshing-tokens')
-  profile(@Req() request: IRequest) {
-    this.tokenService.updateTokens(request.cookies.refreshTokenId);
+  async refresh(
+    @Req() request: IRequest,
+    @Res({ passthrough: true }) response: IResponse,
+  ) {
+    const tokens = await this.tokenService.updateTokens(
+      request.cookies.refreshTokenId,
+    );
+
+    response.cookie('refreshTokenId', tokens.refreshTokenId, {
+      httpOnly: true,
+      // Время жизни эквивалентно времени жизни refresh токена
+      maxAge: Number(
+        this.configService.get<string>('EXPIRE_TIME_SECONDS_4_REFRESH_TOKEN'),
+      ),
+    });
+
+    return {
+      accessToken: tokens.accessToken,
+    };
   }
 }

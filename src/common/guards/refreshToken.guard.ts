@@ -46,6 +46,7 @@ export class RefreshTokenGuard implements CanActivate {
    * Возвращает идентификатор refresh токена из cookies
    *
    * @param request - данные запроса
+   * @returns - см. описание метода
    */
   private getRefreshTokenFromRequest(request: Request): string | undefined {
     return request.cookies.refreshTokenId;
@@ -55,6 +56,8 @@ export class RefreshTokenGuard implements CanActivate {
    * Возвращает refresh токен из базы данных
    *
    * @param tokenId - идентификатор refresh токена
+   * @returns - см. описание метода
+   * @throws - выбрасывает исключение если произошла внутренняя ошибка
    */
   private async getRefreshTokenFromDataBase(
     tokenId: string,

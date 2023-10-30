@@ -5,5 +5,5 @@ export interface IRefreshToken {
   refreshToken: string;
   expireTime: string;
   createdDate: Date;
-  userId: IUser['id'];
+  user: IUser;
 }

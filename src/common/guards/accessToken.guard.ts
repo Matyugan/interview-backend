@@ -34,6 +34,12 @@ export class AccessTokenGuard implements CanActivate {
     return true;
   }
 
+  /**
+   * Возвращает access токен из заголовков
+   *
+   * @param request - данные запроса
+   * @returns - см. описание метода
+   */
   getToken(request: Request): string | undefined {
     return request.headers.authorization;
   }

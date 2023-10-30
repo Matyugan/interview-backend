@@ -71,6 +71,6 @@ export class User implements IUser {
   })
   photo: string;
 
-  @OneToMany(() => RefreshToken, (token) => token.userId, { nullable: false })
-  refreshToken: RefreshToken;
+  @OneToMany(() => RefreshToken, (token) => token.user, { nullable: false })
+  refreshToken: RefreshToken[];
 }

@@ -5,7 +5,6 @@ import {
   PrimaryGeneratedColumn,
   ManyToOne,
   CreateDateColumn,
-  JoinColumn,
 } from 'typeorm';
 import { IRefreshToken } from '@/modules/token/types/refreshToken.interface';
 
@@ -30,5 +29,5 @@ export class RefreshToken implements IRefreshToken {
   createdDate: Date;
 
   @ManyToOne(() => User, (user) => user.refreshToken, { nullable: false })
-  userId: User['id'];
+  user: User;
 }

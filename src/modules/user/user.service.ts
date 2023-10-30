@@ -40,9 +40,9 @@ export class UserService implements IUserService {
   /**
    * Ищет и возвращает пользователя по e-mail
    *
-   * @param email - e-mail
-   * @returns возвращает найденного пользователя
-   * @throws выбрасывает исключение если произошла внутренняя ошибка или пользователя с указанным email не существует
+   * @param email - электронная почта
+   * @returns - возвращает найденного пользователя
+   * @throws - выбрасывает исключение если произошла внутренняя ошибка или пользователя с указанным email не существует
    */
   async findByEmail(email: string): Promise<User> {
     let user: User | null = null;
@@ -70,8 +70,8 @@ export class UserService implements IUserService {
    * Ищет и возвращает пользователя по id
    *
    * @param id - идентификатор пользователя
-   * @returns возвращает найденного пользователя
-   * @throws выбрасывает исключение если произошла внутренняя ошибка или пользователя с указанным id не существует
+   * @returns - возвращает найденного пользователя
+   * @throws - выбрасывает исключение, если произошла внутренняя ошибка или пользователя с указанным id не существует
    */
   async findById(id: string): Promise<User> {
     let user: User | null = null;
@@ -100,8 +100,8 @@ export class UserService implements IUserService {
    * Проверяет наличие пользователя по электронной почте
    *
    * @param email - почта пользователя
-   * @returns возвращает булевое значение в зависимости от наличия пользователя в бд
-   * @throws выбрасывает исключение если произошла внутренняя ошибка
+   * @returns - возвращает булевое значение в зависимости от наличия пользователя в бд
+   * @throws - выбрасывает исключение, если произошла внутренняя ошибка
    */
   async validateUserByEmail(email: string): Promise<boolean> {
     let user: User[] | null = null;

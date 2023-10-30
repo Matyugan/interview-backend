@@ -16,11 +16,14 @@ interface ITokenService {
   saveRefreshToken(
     refreshTokenData: Pick<
       IRefreshToken,
-      'refreshToken' | 'userId' | 'expireTime'
+      'refreshToken' | 'user' | 'expireTime'
     >,
   ): Promise<RefreshToken>;
   deleteRefreshToken(refreshTokenId: string): Promise<DeleteResult>;
-  findById(refreshTokenId: string): Promise<RefreshToken>;
+  findById(refreshTokenId: string): Promise<RefreshToken | null>;
+  updateTokens(
+    refreshTokenId: string,
+  ): Promise<{ accessToken: string; refreshTokenId: string }>;
 }
 @Injectable()
 export class TokenService implements ITokenService {
@@ -36,7 +39,8 @@ export class TokenService implements ITokenService {
    *
    * @param userId - идентификатор пользователя
    * @param username - имя пользоваетля
-   * @returns токены
+   * @returns - токены
+   * @throws - выбрасывает исключение, если произошла внутренняя ошибка
    */
   async generateTokensPaire(
     userId: string,
@@ -85,7 +89,7 @@ export class TokenService implements ITokenService {
   async saveRefreshToken(
     refreshTokenData: Pick<
       IRefreshToken,
-      'refreshToken' | 'userId' | 'expireTime'
+      'refreshToken' | 'user' | 'expireTime'
     >,
   ): Promise<RefreshToken> {
     try {
@@ -97,6 +101,7 @@ export class TokenService implements ITokenService {
 
   /**
    * Удаляет refresh токен из базы
+   *
    * @param refreshTokenId - идентификатор refresh токена
    * @returns - результат операции
    * @throws выбрасывает исключение, если произошла внутренняя ошибка
@@ -114,7 +119,7 @@ export class TokenService implements ITokenService {
    *
    * @param refreshTokenId - идентификатор токена
    * @returns возвращает refresh токен
-   * @throws выбрасывает исключение если произошла внутренняя ошибка
+   * @throws выбрасывает исключение, если произошла внутренняя ошибка
    */
   async findById(refreshTokenId: string): Promise<RefreshToken | null> {
     try {
@@ -122,30 +127,52 @@ export class TokenService implements ITokenService {
         where: {
           id: refreshTokenId,
         },
-        relations: ['userId AS user'],
+        relations: ['user'],
       });
     } catch (error) {
       throw new InternalServerErrorException(error);
     }
   }
 
-  async updateTokens(refreshTokenId: string) {
-    const refreshToken = await this.findById(refreshTokenId);
+  /**
+   * Обновляет токены
+   *
+   * @param refreshTokenId - идентификатор токена
+   * @returns возвращает перегенерированные токены
+   * @throws выбрасывает исключение, если произошла внутренняя ошибка
+   */
+  async updateTokens(
+    refreshTokenId: string,
+  ): Promise<{ accessToken: string; refreshTokenId: string }> {
+    const { refreshToken, user } = (await this.findById(refreshTokenId)) ?? {};
 
     if (!refreshToken) {
       throw new UnauthorizedException('Ошибка аутентификации');
     }
 
     try {
-      await this.jwtService.verifyAsync(refreshToken.refreshToken, {
+      await this.jwtService.verifyAsync(refreshToken, {
         secret: this.configService.get<string>('SECRET_REFRESH'),
       });
     } catch {
       throw new UnauthorizedException('Ошибка аутентификации');
     }
+
     const resultDelete = await this.deleteRefreshToken(refreshTokenId);
+
     if (resultDelete.affected) {
-      // this.generateTokensPaire();
+      const tokens = await this.generateTokensPaire(user.id, user.firstName);
+
+      const savedRefreshToken = await this.saveRefreshToken({
+        user,
+        expireTime: this.configService.get<string>('EXPIRE_TIME_REFRESH'),
+        refreshToken: tokens.refreshToken,
+      });
+
+      return {
+        accessToken: tokens.accessToken,
+        refreshTokenId: savedRefreshToken.id,
+      };
     }
   }
 }
