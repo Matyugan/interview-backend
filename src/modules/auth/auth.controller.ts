@@ -10,6 +10,7 @@ import {
   HttpStatus,
   Get,
   UseGuards,
+  UseFilters,
 } from '@nestjs/common';
 import { CreateUserDto } from '@/modules/user/dto/createUser.dto';
 import { ApiTags } from '@nestjs/swagger';

@@ -45,14 +45,6 @@ export class AuthService implements IAuthService {
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
-    const isUser = await this.userService.validateUserByEmail(
-      createUserDto.email,
-    );
-
-    if (isUser) {
-      throw new ConflictException('Пользователь с таким email уже существует');
-    }
-
     const password = await argon2.hash(createUserDto.password);
 
     try {

@@ -12,7 +12,6 @@ interface IUserService {
   updateUser(id: string, userData: UpdateUserDto): void;
   findByEmail(email: string): Promise<User>;
   findById(id: string): Promise<User>;
-  validateUserByEmail(email: string): Promise<boolean>;
 }
 
 @Injectable()
@@ -94,24 +93,5 @@ export class UserService implements IUserService {
     }
 
     return user;
-  }
-
-  /**
-   * Проверяет наличие пользователя по электронной почте
-   *
-   * @param email - почта пользователя
-   * @returns - возвращает булевое значение в зависимости от наличия пользователя в бд
-   * @throws - выбрасывает исключение, если произошла внутренняя ошибка
-   */
-  async validateUserByEmail(email: string): Promise<boolean> {
-    let user: User[] | null = null;
-
-    try {
-      user = await this.userRepository.find({ where: { email } });
-    } catch (error) {
-      throw new InternalServerErrorException(error);
-    }
-
-    return user.length ? true : false;
   }
 }
