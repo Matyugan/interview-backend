@@ -2,7 +2,6 @@ import {
   Injectable,
   UnauthorizedException,
   InternalServerErrorException,
-  ConflictException,
 } from '@nestjs/common';
 import { CreateUserDto } from '@/modules/user/dto/createUser.dto';
 import { UserService } from '@/modules/user/user.service';
