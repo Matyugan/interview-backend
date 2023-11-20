@@ -2,6 +2,7 @@ import {
   Injectable,
   UnauthorizedException,
   InternalServerErrorException,
+  BadRequestException,
 } from '@nestjs/common';
 import { CreateUserDto } from '@/modules/user/dto/createUser.dto';
 import { UserService } from '@/modules/user/user.service';
@@ -94,7 +95,13 @@ export class AuthService implements IAuthService {
     refreshTokenId: string;
   }> {
     const user = await this.userService.findByEmail(userData.email);
-    console.log(user);
+
+    if (!user) {
+      throw new BadRequestException(
+        'Пользователя с заданным e-mail не существует',
+      );
+    }
+
     const passwordMatches = await argon2.verify(
       user.password,
       userData.password,

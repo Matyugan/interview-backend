@@ -56,12 +56,6 @@ export class UserService implements IUserService {
       throw new InternalServerErrorException(error);
     }
 
-    if (!user) {
-      throw new BadRequestException(
-        'Пользователя с заданным e-mail не существует',
-      );
-    }
-
     return user;
   }
 
