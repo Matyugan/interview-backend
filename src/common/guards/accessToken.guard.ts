@@ -24,8 +24,8 @@ export class AccessTokenGuard implements CanActivate {
     }
 
     try {
-      await this.jwtService.verifyAsync(token, {
-        secret: this.configService.get<string>('SECRET_ACCESS'),
+      this.jwtService.verify(token, {
+        secret: this.configService.get('SECRET_ACCESS'),
       });
     } catch {
       throw new UnauthorizedException('Ошибка аутентификации');

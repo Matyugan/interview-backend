@@ -7,7 +7,6 @@ import {
   OneToMany,
 } from 'typeorm';
 import { IUser } from '@/modules/user/types/user.interface';
-import { Exclude } from 'class-transformer';
 
 @Entity('users')
 export class User implements IUser {
@@ -35,7 +34,6 @@ export class User implements IUser {
   })
   email: string;
 
-  @Exclude({ toPlainOnly: true })
   @Column({
     type: String,
   })

@@ -6,7 +6,7 @@ import { AuthService } from '@/modules/auth/auth.service';
 import { TokenModule } from '@/modules/token/token.module';
 
 @Module({
-  imports: [UserModule, TokenModule, JwtModule.register({})],
+  imports: [UserModule, TokenModule, JwtModule],
   controllers: [AuthController],
   providers: [AuthService],
 })

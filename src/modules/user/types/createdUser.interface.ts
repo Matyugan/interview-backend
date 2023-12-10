@@ -1,3 +1,5 @@
+import { RefreshToken } from '@/modules/token/entities/refreshToken.entity';
+
 export interface ICreatedUser {
   firstName: string;
   lastName: string;
@@ -9,6 +11,6 @@ export interface ICreatedUser {
   photo: string;
   description?: string;
   documents?: string;
-  refreshTokenId: string;
   accessToken: string;
+  refreshToken: RefreshToken;
 }

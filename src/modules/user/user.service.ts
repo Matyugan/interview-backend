@@ -1,8 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-  InternalServerErrorException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UpdateUserDto } from '@/modules/user/dto/updateUser.dto';
@@ -29,11 +25,7 @@ export class UserService implements IUserService {
    * @throws выбрасывает исключение если произошла внутренняя ошибка
    */
   async updateUser(id: string, userData: UpdateUserDto) {
-    try {
-      await this.userRepository.update(id, userData);
-    } catch (error) {
-      throw new InternalServerErrorException(error);
-    }
+    await this.userRepository.update(id, userData);
   }
 
   /**
@@ -44,19 +36,11 @@ export class UserService implements IUserService {
    * @throws - выбрасывает исключение если произошла внутренняя ошибка или пользователя с указанным email не существует
    */
   async findByEmail(email: string): Promise<User> {
-    let user: User | null = null;
-
-    try {
-      user = await this.userRepository.findOne({
-        where: {
-          email,
-        },
-      });
-    } catch (error) {
-      throw new InternalServerErrorException(error);
-    }
-
-    return user;
+    return await this.userRepository.findOne({
+      where: {
+        email,
+      },
+    });
   }
 
   /**
@@ -69,18 +53,14 @@ export class UserService implements IUserService {
   async findById(id: string): Promise<User> {
     let user: User | null = null;
 
-    try {
-      user = await this.userRepository.findOne({
-        where: {
-          id,
-        },
-        relations: {
-          refreshToken: true,
-        },
-      });
-    } catch (error) {
-      throw new InternalServerErrorException(error);
-    }
+    user = await this.userRepository.findOne({
+      where: {
+        id,
+      },
+      relations: {
+        refreshToken: true,
+      },
+    });
 
     if (!user) {
       throw new BadRequestException('Пользователя с заданным id не существует');

@@ -1,18 +1,14 @@
-import {
-  Injectable,
-  InternalServerErrorException,
-  UnauthorizedException,
-} from '@nestjs/common';
-import { ITokens } from '@/modules/token/types/tokens.interface';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { RefreshToken } from '@/modules/token/entities/refreshToken.entity';
 import { DeleteResult, Repository } from 'typeorm';
 import { IRefreshToken } from '@/modules/token/types/refreshToken.interface';
+import { v4 as uuidv4 } from 'uuid';
 
 interface ITokenService {
-  generateTokensPaire(userId: string, username: string): Promise<ITokens>;
+  generateAccessToken(userId: string, username: string): string;
   saveRefreshToken(
     refreshTokenData: Pick<
       IRefreshToken,
@@ -23,7 +19,7 @@ interface ITokenService {
   findById(refreshTokenId: string): Promise<RefreshToken | null>;
   updateTokens(
     refreshTokenId: string,
-  ): Promise<{ accessToken: string; refreshTokenId: string }>;
+  ): Promise<{ accessToken: string; refreshToken: RefreshToken }>;
 }
 @Injectable()
 export class TokenService implements ITokenService {
@@ -35,48 +31,42 @@ export class TokenService implements ITokenService {
   ) {}
 
   /**
-   * Генерирует access и refresh токены
+   * Генерирует access токен
    *
    * @param userId - идентификатор пользователя
    * @param username - имя пользоваетля
-   * @returns - токены
-   * @throws - выбрасывает исключение, если произошла внутренняя ошибка
+   * @returns - токен
    */
-  async generateTokensPaire(
-    userId: string,
-    username: string,
-  ): Promise<ITokens> {
-    try {
-      const [accessToken, refreshToken] = await Promise.all([
-        this.jwtService.signAsync(
-          {
-            sub: userId,
-            username,
-          },
-          {
-            secret: this.configService.get<string>('SECRET_ACCESS'),
-            expiresIn: this.configService.get<string>('EXPIRE_TIME_ACCESS'),
-          },
-        ),
-        this.jwtService.signAsync(
-          {
-            sub: userId,
-            username,
-          },
-          {
-            secret: this.configService.get<string>('SECRET_REFRESH'),
-            expiresIn: this.configService.get<string>('EXPIRE_TIME_REFRESH'),
-          },
-        ),
-      ]);
+  generateAccessToken(userId: string, username: string): string {
+    return this.jwtService.sign({
+      sub: userId,
+      username,
+    });
+  }
 
-      return {
-        accessToken,
-        refreshToken,
-      };
-    } catch (error) {
-      throw new InternalServerErrorException(error);
-    }
+  /**
+   * Генерирует refresh токен
+   *
+   * @returns - токен
+   */
+  generateRefreshToken(): Pick<IRefreshToken, 'refreshToken' | 'expireTime'> {
+    const dateNow = new Date();
+
+    const expireTime = new Date(
+      dateNow.setSeconds(
+        dateNow.getSeconds() +
+          Number(
+            this.configService.get<string>(
+              'EXPIRE_TIME_SECONDS_4_REFRESH_TOKEN',
+            ),
+          ),
+      ),
+    );
+
+    return {
+      refreshToken: uuidv4(),
+      expireTime,
+    };
   }
 
   /**
@@ -92,11 +82,7 @@ export class TokenService implements ITokenService {
       'refreshToken' | 'user' | 'expireTime'
     >,
   ): Promise<RefreshToken> {
-    try {
-      return await this.tokenRepository.save(refreshTokenData);
-    } catch (error) {
-      throw new InternalServerErrorException(error);
-    }
+    return await this.tokenRepository.save(refreshTokenData);
   }
 
   /**
@@ -107,11 +93,7 @@ export class TokenService implements ITokenService {
    * @throws выбрасывает исключение, если произошла внутренняя ошибка
    */
   async deleteRefreshToken(refreshTokenId: string): Promise<DeleteResult> {
-    try {
-      return await this.tokenRepository.delete({ id: refreshTokenId });
-    } catch (error) {
-      throw new InternalServerErrorException(error);
-    }
+    return await this.tokenRepository.delete({ id: refreshTokenId });
   }
 
   /**
@@ -122,16 +104,12 @@ export class TokenService implements ITokenService {
    * @throws выбрасывает исключение, если произошла внутренняя ошибка
    */
   async findById(refreshTokenId: string): Promise<RefreshToken | null> {
-    try {
-      return await this.tokenRepository.findOne({
-        where: {
-          id: refreshTokenId,
-        },
-        relations: ['user'],
-      });
-    } catch (error) {
-      throw new InternalServerErrorException(error);
-    }
+    return await this.tokenRepository.findOne({
+      where: {
+        id: refreshTokenId,
+      },
+      relations: ['user'],
+    });
   }
 
   /**
@@ -143,35 +121,41 @@ export class TokenService implements ITokenService {
    */
   async updateTokens(
     refreshTokenId: string,
-  ): Promise<{ accessToken: string; refreshTokenId: string }> {
-    const { refreshToken, user } = (await this.findById(refreshTokenId)) ?? {};
-
-    if (!refreshToken) {
+  ): Promise<{ accessToken: string; refreshToken: RefreshToken }> {
+    if (!refreshTokenId) {
       throw new UnauthorizedException('Ошибка аутентификации');
     }
 
-    try {
-      await this.jwtService.verifyAsync(refreshToken, {
-        secret: this.configService.get<string>('SECRET_REFRESH'),
-      });
-    } catch {
+    const tokenData = await this.findById(refreshTokenId);
+
+    if (!tokenData.refreshToken) {
+      throw new UnauthorizedException('Ошибка аутентификации');
+    }
+
+    const dateNow = new Date();
+
+    if (dateNow > tokenData.expireTime) {
       throw new UnauthorizedException('Ошибка аутентификации');
     }
 
     const resultDelete = await this.deleteRefreshToken(refreshTokenId);
 
     if (resultDelete.affected) {
-      const tokens = await this.generateTokensPaire(user.id, user.firstName);
+      const accessToken = this.generateAccessToken(
+        tokenData.user.id,
+        tokenData.user.firstName,
+      );
+
+      const refreshToken = this.generateRefreshToken();
 
       const savedRefreshToken = await this.saveRefreshToken({
-        user,
-        expireTime: this.configService.get<string>('EXPIRE_TIME_REFRESH'),
-        refreshToken: tokens.refreshToken,
+        user: tokenData.user,
+        ...refreshToken,
       });
 
       return {
-        accessToken: tokens.accessToken,
-        refreshTokenId: savedRefreshToken.id,
+        accessToken: accessToken,
+        refreshToken: savedRefreshToken,
       };
     }
   }

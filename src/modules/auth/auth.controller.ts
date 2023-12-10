@@ -1,7 +1,6 @@
 import { TokenService } from '@/modules/token/token.service';
 import {
   Body,
-  ConflictException,
   Controller,
   HttpCode,
   Post,
@@ -10,6 +9,8 @@ import {
   HttpStatus,
   Get,
   UseGuards,
+  ClassSerializerInterceptor,
+  UseInterceptors,
 } from '@nestjs/common';
 import { CreateUserDto } from '@/modules/user/dto/createUser.dto';
 import { ApiTags } from '@nestjs/swagger';
@@ -17,36 +18,34 @@ import { AuthService } from '@/modules/auth/auth.service';
 import { AuthDto } from '@/modules/auth/dto/auth.dto';
 import { Response as IResponse, Request as IRequest } from 'express';
 import { ICreatedUser } from '@/modules/user/types/createdUser.interface';
-import { ConfigService } from '@nestjs/config';
 import { AccessTokenGuard } from '@/common/guards/accessToken.guard';
-import { RefreshTokenGuard } from '@/common/guards/refreshToken.guard';
+import { plainToClass } from 'class-transformer';
+import SerializedUser from '@/modules/user/serialization/serializedUser';
 
 @ApiTags('auth')
 @Controller('api/v1/auth')
 export class AuthController {
   constructor(
     private authService: AuthService,
-    private configService: ConfigService,
     private tokenService: TokenService,
   ) {}
 
+  @UseInterceptors(ClassSerializerInterceptor)
   @Post('signup')
   async signUp(
     @Body() createUserDto: CreateUserDto,
     @Res({ passthrough: true }) response: IResponse,
-  ): Promise<ICreatedUser> {
-    const userData = await this.authService.signUp(createUserDto);
+  ): Promise<Omit<ICreatedUser, 'refreshToken'>> {
+    const createdUserData = await this.authService.signUp(createUserDto);
 
-    response.cookie('refreshTokenId', userData.refreshTokenId, {
+    response.cookie('refreshTokenId', createdUserData.refreshToken.id, {
       httpOnly: true,
-      // Время жизни эквивалентно времени жизни refresh токена
-      maxAge: Number(
-        this.configService.get<string>('EXPIRE_TIME_SECONDS_4_REFRESH_TOKEN'),
-      ),
+      maxAge: Number(createdUserData.refreshToken.expireTime),
     });
 
-    delete userData.refreshTokenId;
-    return userData;
+    const serializedUserData = plainToClass(SerializedUser, createdUserData);
+
+    return serializedUserData;
   }
 
   @Post('signin')
@@ -54,60 +53,42 @@ export class AuthController {
     @Body() authDto: AuthDto,
     @Res({ passthrough: true }) response: IResponse,
   ) {
-    const result = await this.authService.signIn(authDto);
-
-    response.cookie('refreshTokenId', result.refreshTokenId, {
-      httpOnly: true,
-      // Время жизни эквивалентно времени жизни refresh токена
-      maxAge: Number(
-        this.configService.get<string>('EXPIRE_TIME_SECONDS_4_REFRESH_TOKEN'),
-      ),
-    });
-
-    return { accessToken: result.accessToken };
-  }
-
-  @UseGuards(AccessTokenGuard, RefreshTokenGuard)
-  @Get('logout')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async logout(
-    @Req() request: IRequest,
-    @Res({ passthrough: true }) response: IResponse,
-  ) {
-    const result = await this.authService.logout(
-      request.cookies['refreshTokenId'],
+    const { accessToken, refreshToken } = await this.authService.signIn(
+      authDto,
     );
 
-    if (!result.affected) {
-      throw new ConflictException(
-        'Refresh token не был удалён, по причине отсутствия в базе',
-      );
-    }
+    response.cookie('refreshTokenId', refreshToken.id, {
+      httpOnly: true,
+      maxAge: Number(refreshToken.expireTime),
+    });
 
+    return { accessToken };
+  }
+
+  @UseGuards(AccessTokenGuard)
+  @Get('logout')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async logout(@Res({ passthrough: true }) response: IResponse) {
     response.clearCookie('refreshTokenId');
     return;
   }
 
-  @UseGuards(RefreshTokenGuard)
   @Get('refreshing-tokens')
   async refresh(
     @Req() request: IRequest,
     @Res({ passthrough: true }) response: IResponse,
   ) {
-    const tokens = await this.tokenService.updateTokens(
+    const { accessToken, refreshToken } = await this.tokenService.updateTokens(
       request.cookies.refreshTokenId,
     );
 
-    response.cookie('refreshTokenId', tokens.refreshTokenId, {
+    response.cookie('refreshTokenId', refreshToken.id, {
       httpOnly: true,
-      // Время жизни эквивалентно времени жизни refresh токена
-      maxAge: Number(
-        this.configService.get<string>('EXPIRE_TIME_SECONDS_4_REFRESH_TOKEN'),
-      ),
+      maxAge: Number(refreshToken.expireTime),
     });
 
     return {
-      accessToken: tokens.accessToken,
+      accessToken,
     };
   }
 }

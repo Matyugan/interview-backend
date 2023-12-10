@@ -20,10 +20,10 @@ export class RefreshToken implements IRefreshToken {
   refreshToken: string;
 
   @Column({
-    type: String,
+    type: 'timestamptz',
     nullable: false,
   })
-  expireTime: string;
+  expireTime: Date;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdDate: Date;
