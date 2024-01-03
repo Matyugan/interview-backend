@@ -8,7 +8,7 @@ import { IRefreshToken } from '@/modules/token/types/refreshToken.interface';
 import { v4 as uuidv4 } from 'uuid';
 
 interface ITokenService {
-  generateAccessToken(userId: string, username: string): string;
+  generateAccessToken(userId: string, username: string): Promise<string>;
   saveRefreshToken(
     refreshTokenData: Pick<
       IRefreshToken,
@@ -37,8 +37,8 @@ export class TokenService implements ITokenService {
    * @param username - имя пользоваетля
    * @returns - токен
    */
-  generateAccessToken(userId: string, username: string): string {
-    return this.jwtService.sign({
+  async generateAccessToken(userId: string, username: string): Promise<string> {
+    return await this.jwtService.signAsync({
       sub: userId,
       username,
     });
@@ -141,7 +141,7 @@ export class TokenService implements ITokenService {
     const resultDelete = await this.deleteRefreshToken(refreshTokenId);
 
     if (resultDelete.affected) {
-      const accessToken = this.generateAccessToken(
+      const accessToken = await this.generateAccessToken(
         tokenData.user.id,
         tokenData.user.firstName,
       );

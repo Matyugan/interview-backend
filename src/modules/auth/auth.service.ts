@@ -51,7 +51,7 @@ export class AuthService implements IAuthService {
         password,
       });
 
-      const accessToken = this.tokenService.generateAccessToken(
+      const accessToken = await this.tokenService.generateAccessToken(
         user.id,
         user.firstName,
       );
@@ -94,9 +94,7 @@ export class AuthService implements IAuthService {
     const user = await this.userService.findByEmail(userData.email);
 
     if (!user) {
-      throw new BadRequestException(
-        'Пользователя с заданным e-mail не существует',
-      );
+      throw new BadRequestException('Некорректный логин или пароль');
     }
 
     const passwordMatches = await argon2.verify(
@@ -105,10 +103,10 @@ export class AuthService implements IAuthService {
     );
 
     if (!passwordMatches) {
-      throw new UnauthorizedException('Некорректный пароль');
+      throw new UnauthorizedException('Некорректный логин или пароль');
     }
 
-    const accessToken = this.tokenService.generateAccessToken(
+    const accessToken = await this.tokenService.generateAccessToken(
       user.id,
       user.firstName,
     );

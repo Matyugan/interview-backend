@@ -1,6 +1,6 @@
 import { IsEmailUserAlreadyExist } from '@/modules/user/validators/IsEmailUserAlreadyExist.validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty } from 'class-validator';
+import { IsEmail, IsMobilePhone, IsNotEmpty, Matches } from 'class-validator';
 
 export class CreateUserDto {
   @ApiProperty({
@@ -28,6 +28,9 @@ export class CreateUserDto {
   @ApiProperty({
     description: 'Дата рождения',
     example: '09.04.1994',
+  })
+  @Matches(/^(0[1-9]|[12][0-9]|3[01])[.](0[1-9]|1[012])[.](19|20)[0-9]{2}$/, {
+    message: 'Некорректный формат даты рождения',
   })
   readonly dateOfBirth?: string;
 
@@ -61,6 +64,7 @@ export class CreateUserDto {
     description: 'Номер телефона',
     example: '8-987-951-64-77',
   })
+  @IsMobilePhone('ru-RU')
   readonly phoneNumber?: string;
 
   @ApiProperty({

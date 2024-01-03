@@ -19,7 +19,6 @@ import { AuthDto } from '@/modules/auth/dto/auth.dto';
 import { Response as IResponse, Request as IRequest } from 'express';
 import { ICreatedUser } from '@/modules/user/types/createdUser.interface';
 import { AccessTokenGuard } from '@/common/guards/accessToken.guard';
-import { plainToClass } from 'class-transformer';
 import SerializedUser from '@/modules/user/serialization/serializedUser';
 
 @ApiTags('auth')
@@ -43,9 +42,7 @@ export class AuthController {
       maxAge: Number(createdUserData.refreshToken.expireTime),
     });
 
-    const serializedUserData = plainToClass(SerializedUser, createdUserData);
-
-    return serializedUserData;
+    return new SerializedUser(createdUserData);
   }
 
   @Post('signin')
