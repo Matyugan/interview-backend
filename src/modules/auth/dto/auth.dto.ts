@@ -1,4 +1,3 @@
-import { IsEmailUserAlreadyExist } from '@/modules/user/validators/IsEmailUserAlreadyExist.validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEmail, IsNotEmpty } from 'class-validator';
 
@@ -10,7 +9,6 @@ export class AuthDto {
   })
   @IsNotEmpty()
   @IsEmail()
-  @IsEmailUserAlreadyExist()
   readonly email: string;
 
   @ApiProperty({
