@@ -1,6 +1,13 @@
 import { IsEmailUserAlreadyExist } from '@/modules/user/validators/IsEmailUserAlreadyExist.validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsMobilePhone, IsNotEmpty, Matches } from 'class-validator';
+import {
+  IsDateString,
+  IsEmail,
+  IsMobilePhone,
+  IsNotEmpty,
+  IsStrongPassword,
+  IsString,
+} from 'class-validator';
 
 export class CreateUserDto {
   @ApiProperty({
@@ -9,6 +16,7 @@ export class CreateUserDto {
     required: true,
   })
   @IsNotEmpty()
+  @IsString()
   readonly firstName: string;
 
   @ApiProperty({
@@ -17,27 +25,28 @@ export class CreateUserDto {
     required: true,
   })
   @IsNotEmpty()
+  @IsString()
   readonly lastName: string;
 
   @ApiProperty({
     description: 'Отчество',
     example: 'Петрович',
   })
+  @IsString()
   readonly patronymic?: string;
 
   @ApiProperty({
     description: 'Дата рождения',
     example: '09.04.1994',
   })
-  @Matches(/^(0[1-9]|[12][0-9]|3[01])[.](0[1-9]|1[012])[.](19|20)[0-9]{2}$/, {
-    message: 'Некорректный формат даты рождения',
-  })
+  @IsDateString({ strict: true, strictSeparator: true })
   readonly dateOfBirth?: string;
 
   @ApiProperty({
     description: 'Место жительства',
     example: 'Россия, г. Самара',
   })
+  @IsString()
   readonly placeOfResidence?: string;
 
   @ApiProperty({
@@ -46,6 +55,7 @@ export class CreateUserDto {
     required: true,
   })
   @IsNotEmpty()
+  @IsStrongPassword({ minSymbols: 1, minLength: 6, minUppercase: 2 })
   readonly password: string;
 
   @ApiProperty({
@@ -73,17 +83,20 @@ export class CreateUserDto {
     required: true,
   })
   @IsNotEmpty()
+  @IsString()
   readonly photo: string;
 
   @ApiProperty({
     description: 'Описание',
     example: 'Описание технологического стэка на котором работает специалист',
   })
+  @IsString()
   readonly description?: string;
 
   @ApiProperty({
     description: 'Документы',
     example: 'Документы подтверждающие навыки специалиста',
   })
+  @IsString()
   readonly documents?: string;
 }
