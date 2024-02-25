@@ -1,5 +1,5 @@
 import { IsEmailUserAlreadyExist } from '@/modules/user/validators/IsEmailUserAlreadyExist.validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsDateString,
   IsEmail,
@@ -7,6 +7,7 @@ import {
   IsNotEmpty,
   IsStrongPassword,
   IsString,
+  IsOptional,
 } from 'class-validator';
 
 export class CreateUserDto {
@@ -28,24 +29,27 @@ export class CreateUserDto {
   @IsString()
   readonly lastName: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Отчество',
     example: 'Петрович',
   })
+  @IsOptional()
   @IsString()
   readonly patronymic?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Дата рождения',
     example: '09.04.1994',
   })
+  @IsOptional()
   @IsDateString({ strict: true, strictSeparator: true })
   readonly dateOfBirth?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Место жительства',
     example: 'Россия, г. Самара',
   })
+  @IsOptional()
   @IsString()
   readonly placeOfResidence?: string;
 
@@ -70,33 +74,36 @@ export class CreateUserDto {
   })
   readonly email: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Номер телефона',
     example: '8-987-951-64-77',
   })
+  @IsOptional()
   @IsMobilePhone('ru-RU')
   readonly phoneNumber?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Фотография',
     example: 'Без примера',
-    required: true,
   })
+  @IsOptional()
   @IsNotEmpty()
   @IsString()
-  readonly photo: string;
+  readonly photo?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Описание',
     example: 'Описание технологического стэка на котором работает специалист',
   })
+  @IsOptional()
   @IsString()
   readonly description?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Документы',
     example: 'Документы подтверждающие навыки специалиста',
   })
+  @IsOptional()
   @IsString()
   readonly documents?: string;
 }
