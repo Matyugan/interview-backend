@@ -1,33 +1,32 @@
-import { IsEmailUserAlreadyExist } from '@/modules/user/validators/IsEmailUserAlreadyExist.validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsDateString,
   IsEmail,
   IsMobilePhone,
   IsNotEmpty,
-  IsStrongPassword,
-  IsString,
   IsOptional,
+  IsString,
+  IsStrongPassword,
 } from 'class-validator';
 
-export class CreateUserDto {
-  @ApiProperty({
+export class UpdateUserDto {
+  @ApiPropertyOptional({
     description: 'Имя',
     example: 'Иван',
-    required: true,
   })
+  @IsOptional()
   @IsNotEmpty()
   @IsString()
-  readonly firstName: string;
+  readonly firstName?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Фамилия',
     example: 'Пронин',
-    required: true,
   })
+  @IsOptional()
   @IsNotEmpty()
   @IsString()
-  readonly lastName: string;
+  readonly lastName?: string;
 
   @ApiPropertyOptional({
     description: 'Отчество',
@@ -53,26 +52,23 @@ export class CreateUserDto {
   @IsString()
   readonly placeOfResidence?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Пароль',
     example: 'qwerty',
-    required: true,
   })
+  @IsOptional()
   @IsNotEmpty()
   @IsStrongPassword({ minSymbols: 1, minLength: 6, minUppercase: 2 })
-  readonly password: string;
+  readonly password?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'e-mail',
     example: 'pronin@mail.ru',
-    required: true,
   })
-  @IsNotEmpty()
+  @IsOptional()
   @IsEmail()
-  @IsEmailUserAlreadyExist({
-    message: 'Пользователь с таким E-mail уже существует',
-  })
-  readonly email: string;
+  @IsNotEmpty()
+  readonly email?: string;
 
   @ApiPropertyOptional({
     description: 'Номер телефона',
@@ -85,6 +81,7 @@ export class CreateUserDto {
   @ApiPropertyOptional({
     description: 'Фотография',
     example: 'Без примера',
+    required: true,
   })
   @IsOptional()
   @IsNotEmpty()
