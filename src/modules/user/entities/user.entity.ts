@@ -20,6 +20,7 @@ export class User implements IUser {
 
   @Column({
     type: String,
+    nullable: true,
   })
   patronymic: string;
 
@@ -41,31 +42,37 @@ export class User implements IUser {
 
   @Column({
     type: String,
+    nullable: true,
   })
   dateOfBirth: string;
 
   @Column({
     type: String,
+    nullable: true,
   })
   phoneNumber: string;
 
   @Column({
     type: String,
+    nullable: true,
   })
   placeOfResidence: string;
 
   @Column({
     type: String,
+    nullable: true,
   })
   description: string;
 
   @Column({
     type: String,
+    nullable: true,
   })
   documents: string;
 
   @Column({
     type: String,
+    nullable: true,
   })
   photo: string;
 
